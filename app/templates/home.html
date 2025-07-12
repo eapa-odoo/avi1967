@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Q&A Hub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background-color: #f0f7ff;
+    }
+    .question-card {
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      text-decoration: none;
+      color: inherit;
+    }
+    .tag {
+      background-color: #f1f3f5;
+      border-radius: 20px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.85rem;
+      margin-right: 0.5rem;
+    }
+    .ask-button {
+      background-color: #5c1d99;
+      color: #fff;
+      border-radius: 0.6rem;
+      font-weight: bold;
+    }
+    .ask-button:hover {
+      background-color: #490d82;
+    }
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #ddd;
+    }
+    .notification-bell {
+      position: relative;
+    }
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background-color: red;
+      color: white;
+      border-radius: 50%;
+      font-size: 0.75rem;
+      padding: 0.25em 0.5em;
+    }
+    .dropdown-menu {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4 class="fw-bold">🪶 Q&A Hub</h4>
+      <div class="d-flex align-items-center gap-3">
+        <a href="{{ url_for('main.ask') }}" class="btn ask-button text-white text-decoration-none">+ Ask Question</a>
+
+        <!-- Notification Bell -->
+        <div class="dropdown position-relative">
+          <button class="btn btn-light rounded-circle p-2 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            🔔
+            {% if unread_count > 0 %}
+              <span class="notification-badge">{{ unread_count }}</span>
+            {% endif %}
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            {% if notifications %}
+              {% for notif in notifications %}
+                <li class="dropdown-item {{ '' if notif.is_read else 'fw-bold' }}">{{ notif.message }}</li>
+              {% endfor %}
+            {% else %}
+              <li class="dropdown-item text-muted">No notifications</li>
+            {% endif %}
+          </ul>
+        </div>
+
+        <a href="{{ url_for('main.profile') }}">
+          <img src="{{ current_user.profile_pic or 'https://via.placeholder.com/40' }}" class="user-avatar" alt="Profile" />
+        </a>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <input type="text" class="form-control" id="searchInput" placeholder="🔍 Search questions...">
+
+    <!-- Title -->
+    <h3 class="fw-bold mb-3">All Questions</h3>
+
+    <div id="questionsWrapper">
+      {% for q in questions %}
+      <a href="{{ url_for('main.view_question', id=q.id) }}" class="question-card d-block">
+        <h5 class="fw-semibold question-title">{{ q.title }}</h5>
+        {% if q.tags %}
+        <div class="mb-2">
+          {% for tag in q.tags.split(',') %}
+            <span class="tag">{{ tag.strip() }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <div class="user-avatar"></div>
+            <span class="question-meta">
+              {{ q.user.username if q.user else 'Unknown' }} on {{ q.created_at.strftime('%b %d, %Y') if q.created_at else '' }}
+            </span>
+          </div>
+          <div class="interaction-stats">
+            <span>👍 {{ q.likes or 0 }}</span>
+            <span>💬 {{ q.answers|length }}</span>
+            <span>👁️ {{ q.views or 0 }}</span>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+
+      <!-- Hardcoded Sample Questions -->
+      <div class="question-card">
+        <h5 class="fw-semibold question-title">What is the difference between Python lists and tuples?</h5>
+        <div class="mb-2">
+          <span class="tag">Python</span>
+          <span class="tag">Data Structures</span>
+        </div>
+        <div class="question-meta mb-2">Posted by Alice on Jul 10, 2025</div>
+        <ul class="ps-3">
+          <li>Lists are mutable while tuples are immutable.</li>
+          <li>Tuples are faster and use less memory.</li>
+        </ul>
+      </div>
+
+      <div class="question-card">
+        <h5 class="fw-semibold question-title">How does async/await work in JavaScript?</h5>
+        <div class="mb-2">
+          <span class="tag">JavaScript</span>
+          <span class="tag">Async</span>
+        </div>
+        <div class="question-meta mb-2">Posted by Bob on Jul 9, 2025</div>
+        <ul class="ps-3">
+          <li><code>async</code> makes a function return a promise.</li>
+          <li><code>await</code> pauses execution until the promise is resolved.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const searchInput = document.getElementById('searchInput');
+    const cards = document.querySelectorAll('.question-card');
+
+    searchInput.addEventListener('input', () => {
+      const value = searchInput.value.toLowerCase();
+      cards.forEach(card => {
+        const title = card.querySelector('.question-title')?.textContent.toLowerCase() || '';
+        card.style.display = title.includes(value) ? 'block' : 'none';
+      });
+    });
+  </script>
+</body>
+</html>
