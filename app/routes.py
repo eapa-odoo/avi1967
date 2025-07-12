@@ -2,8 +2,9 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from .models import db, User, Question, Answer, Notification
+from .models import db, User, Question, Answer, Notification, Vote
 import os
+from flask import jsonify
 
 main = Blueprint('main', __name__)
 
@@ -58,16 +59,24 @@ def profile():
 def view_question(id):
     question = Question.query.get_or_404(id)
 
+    # Increment views
+    question.views = (question.views or 0) + 1
+    db.session.commit()
+
+    # Handle new answer submission
     if request.method == 'POST':
         if not current_user.is_authenticated:
             flash("You must be logged in to post an answer.")
             return redirect(url_for('main.login'))
 
         content = request.form.get('answer')
+        if not content:
+            flash("Answer cannot be empty.")
+            return redirect(url_for('main.view_question', id=id))
+
         answer = Answer(content=content, user_id=current_user.id, question_id=id)
         db.session.add(answer)
 
-        # 🔔 Notify the question owner
         if question.user_id != current_user.id:
             notification = Notification(
                 recipient_id=question.user_id,
@@ -78,13 +87,21 @@ def view_question(id):
         db.session.commit()
         return redirect(url_for('main.view_question', id=id))
 
-    # 🔕 Mark notifications as read when user visits this question
-    if current_user.is_authenticated:
-        for notif in current_user.notifications:
-            notif.is_read = True
-        db.session.commit()
-
     return render_template('question.html', question=question)
+
+
+@main.route('/upvote/<int:question_id>', methods=['POST'])
+@login_required
+def upvote_question(question_id):
+    question = Question.query.get_or_404(question_id)
+
+    if current_user in question.voters:
+        return jsonify({'error': 'Already upvoted'}), 400
+
+    question.voters.append(current_user)
+    question.likes += 1
+    db.session.commit()
+    return jsonify({'likes': question.likes})
 
 
 @main.route('/ask', methods=['GET', 'POST'])

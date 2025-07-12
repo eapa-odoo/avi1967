@@ -37,6 +37,7 @@
     .user-avatar {
       width: 40px;
       height: 40px;
+      object-fit: cover;
       border-radius: 50%;
       background-color: #ddd;
     }
@@ -57,6 +58,13 @@
       max-height: 300px;
       overflow-y: auto;
     }
+    .comment-section .comment {
+      background-color: #f8f9fa;
+      padding: 0.5rem 0.75rem;
+      border-radius: 10px;
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
@@ -65,7 +73,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h4 class="fw-bold">🪶 Q&A Hub</h4>
       <div class="d-flex align-items-center gap-3">
-        <a href="{{ url_for('main.ask') }}" class="btn ask-button text-white text-decoration-none">+ Ask Question</a>
+        <a href="{{ url_for('main.ask') }}" class="btn ask-button text-white">+ Ask Question</a>
 
         <!-- Notification Bell -->
         <div class="dropdown position-relative">
@@ -93,14 +101,13 @@
     </div>
 
     <!-- Search -->
-    <input type="text" class="form-control" id="searchInput" placeholder="🔍 Search questions...">
+    <input type="text" class="form-control mb-4" id="searchInput" placeholder="🔍 Search questions...">
 
-    <!-- Title -->
-    <h3 class="fw-bold mb-3">All Questions</h3>
-
+    <!-- Questions List -->
     <div id="questionsWrapper">
+
       {% for q in questions %}
-      <a href="{{ url_for('main.view_question', id=q.id) }}" class="question-card d-block">
+      <div class="question-card" data-id="{{ q.id }}">
         <h5 class="fw-semibold question-title">{{ q.title }}</h5>
         {% if q.tags %}
         <div class="mb-2">
@@ -111,45 +118,64 @@
         {% endif %}
         <div class="d-flex justify-content-between align-items-center">
           <div class="d-flex align-items-center gap-2">
-            <div class="user-avatar"></div>
-            <span class="question-meta">
-              {{ q.user.username if q.user else 'Unknown' }} on {{ q.created_at.strftime('%b %d, %Y') if q.created_at else '' }}
-            </span>
+            <img src="{{ q.user.profile_pic if q.user else 'https://via.placeholder.com/40' }}" class="user-avatar" />
+            <span class="question-meta">{{ q.user.username if q.user else 'Unknown' }} on {{ q.created_at.strftime('%b %d, %Y') }}</span>
           </div>
           <div class="interaction-stats">
-            <span>👍 {{ q.likes or 0 }}</span>
-            <span>💬 {{ q.answers|length }}</span>
+            <span class="upvote-btn" style="cursor:pointer;">👍 <span class="like-count">{{ q.likes or 0 }}</span></span>
+            <span class="comment-btn" style="cursor:pointer;">💬 <span class="comment-count">{{ q.answers|length }}</span></span>
             <span>👁️ {{ q.views or 0 }}</span>
           </div>
         </div>
-      </a>
+      </div>
       {% endfor %}
 
-      <!-- Hardcoded Sample Questions -->
-      <div class="question-card">
+      <!-- Hardcoded Sample Question 1 -->
+      <div class="question-card" data-id="101">
         <h5 class="fw-semibold question-title">What is the difference between Python lists and tuples?</h5>
         <div class="mb-2">
           <span class="tag">Python</span>
           <span class="tag">Data Structures</span>
         </div>
-        <div class="question-meta mb-2">Posted by Alice on Jul 10, 2025</div>
-        <ul class="ps-3">
-          <li>Lists are mutable while tuples are immutable.</li>
-          <li>Tuples are faster and use less memory.</li>
-        </ul>
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTyW2MAFrFnfa_bT1jSttLbmvfotJcqQyCCGg&s" class="user-avatar" />
+            <span class="question-meta">Alice on Jul 10, 2025</span>
+          </div>
+          <div class="interaction-stats">
+            <span class="upvote-btn" style="cursor:pointer;">👍 <span class="like-count">12</span></span>
+            <span class="comment-btn" style="cursor:pointer;">💬 <span class="comment-count">3</span></span>
+            <span>👁️ 140</span>
+          </div>
+        </div>
+        <div class="mt-2">
+          <strong>Recent Comment:</strong>
+          <p class="text-muted mb-0">Lists are mutable while tuples are immutable...</p>
+        </div>
       </div>
 
-      <div class="question-card">
+      <!-- Hardcoded Sample Question 2 -->
+      <div class="question-card" data-id="102">
         <h5 class="fw-semibold question-title">How does async/await work in JavaScript?</h5>
         <div class="mb-2">
           <span class="tag">JavaScript</span>
           <span class="tag">Async</span>
         </div>
-        <div class="question-meta mb-2">Posted by Bob on Jul 9, 2025</div>
-        <ul class="ps-3">
-          <li><code>async</code> makes a function return a promise.</li>
-          <li><code>await</code> pauses execution until the promise is resolved.</li>
-        </ul>
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTgKpoOr-PUnAljpxR2LCoihCZqdoGkXYrN5g&s" class="user-avatar" />
+            <span class="question-meta">Bob on Jul 9, 2025</span>
+          </div>
+          <div class="interaction-stats">
+            <span class="upvote-btn" style="cursor:pointer;">👍 <span class="like-count">7</span></span>
+            <span class="comment-btn" style="cursor:pointer;">💬 <span class="comment-count">2</span></span>
+            <span>👁️ 95</span>
+          </div>
+        </div>
+        <div class="mt-2">
+          <strong>Recent Comment:</strong>
+          <p class="text-muted mb-0"><code>await</code> pauses execution until the promise is resolved...</p>
+        </div>
       </div>
     </div>
   </div>
@@ -157,13 +183,66 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const searchInput = document.getElementById('searchInput');
-    const cards = document.querySelectorAll('.question-card');
+  const cards = document.querySelectorAll('.question-card');
+  const upvoted = new Set(); // prevent multiple upvotes per session
 
-    searchInput.addEventListener('input', () => {
-      const value = searchInput.value.toLowerCase();
-      cards.forEach(card => {
-        const title = card.querySelector('.question-title')?.textContent.toLowerCase() || '';
-        card.style.display = title.includes(value) ? 'block' : 'none';
+  // 🔍 Live Search
+  searchInput.addEventListener('input', () => {
+    const value = searchInput.value.toLowerCase();
+    cards.forEach(card => {
+      const title = card.querySelector('.question-title')?.textContent.toLowerCase() || '';
+      card.style.display = title.includes(value) ? 'block' : 'none';
+    });
+  });
+
+  // 👍 Handle Upvotes (Client-side only)
+  document.querySelectorAll('.upvote-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const card = this.closest('.question-card');
+      const questionId = card.getAttribute('data-id');
+      const countSpan = this.querySelector('.like-count');
+
+      if (upvoted.has(questionId)) {
+        alert("You've already upvoted this question.");
+        return;
+      }
+
+      upvoted.add(questionId);
+      countSpan.textContent = parseInt(countSpan.textContent) + 1;
+    });
+  });
+
+    // 💬 Comment Toggle + Submit
+    document.querySelectorAll('.question-card').forEach(card => {
+      const commentBtn = card.querySelector('.comment-btn');
+      const commentBox = document.createElement('div');
+      commentBox.className = 'comment-section mt-3';
+      commentBox.style.display = 'none';
+      commentBox.innerHTML = `
+        <textarea class="form-control mb-2 comment-input" rows="2" placeholder="Write a comment..."></textarea>
+        <button class="btn btn-sm btn-primary submit-comment">Post Comment</button>
+        <div class="comments mt-2"></div>
+      `;
+      card.appendChild(commentBox);
+
+      commentBtn.addEventListener('click', () => {
+        commentBox.style.display = commentBox.style.display === 'none' ? 'block' : 'none';
+      });
+
+      commentBox.querySelector('.submit-comment').addEventListener('click', () => {
+        const textarea = commentBox.querySelector('.comment-input');
+        const commentsDiv = commentBox.querySelector('.comments');
+        const comment = textarea.value.trim();
+        if (!comment) return;
+
+        const newComment = document.createElement('div');
+        newComment.className = 'comment';
+        newComment.textContent = comment;
+        commentsDiv.appendChild(newComment);
+        textarea.value = '';
+
+        const commentCount = card.querySelector('.comment-count');
+        commentCount.textContent = parseInt(commentCount.textContent) + 1;
       });
     });
   </script>
