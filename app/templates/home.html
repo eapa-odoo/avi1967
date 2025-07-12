@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Q&A Hub</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.min.js"></script>
   <style>
     body {
       background-color: #f0f7ff;
@@ -58,12 +60,24 @@
       max-height: 300px;
       overflow-y: auto;
     }
-    .comment-section .comment {
+    .comment-section .comment, .answer-section .answer {
       background-color: #f8f9fa;
       padding: 0.5rem 0.75rem;
       border-radius: 10px;
       margin-top: 0.5rem;
       font-size: 0.9rem;
+      position: relative;
+    }
+    .ql-editor {
+      min-height: 100px;
+    }
+    .delete-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      font-size: 0.8rem;
+      color: #dc3545;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -74,7 +88,6 @@
       <h4 class="fw-bold">🪶 Q&A Hub</h4>
       <div class="d-flex align-items-center gap-3">
         <a href="{{ url_for('main.ask') }}" class="btn ask-button text-white">+ Ask Question</a>
-
         <!-- Notification Bell -->
         <div class="dropdown position-relative">
           <button class="btn btn-light rounded-circle p-2 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -93,19 +106,15 @@
             {% endif %}
           </ul>
         </div>
-
         <a href="{{ url_for('main.profile') }}">
           <img src="{{ current_user.profile_pic or 'https://via.placeholder.com/40' }}" class="user-avatar" alt="Profile" />
         </a>
       </div>
     </div>
-
     <!-- Search -->
     <input type="text" class="form-control mb-4" id="searchInput" placeholder="🔍 Search questions...">
-
     <!-- Questions List -->
     <div id="questionsWrapper">
-
       {% for q in questions %}
       <div class="question-card" data-id="{{ q.id }}">
         <h5 class="fw-semibold question-title">{{ q.title }}</h5>
@@ -127,9 +136,11 @@
             <span>👁️ {{ q.views or 0 }}</span>
           </div>
         </div>
+        <div class="d-flex justify-content-end mt-2">
+          <button class="btn btn-sm ask-button text-white answer-btn" aria-label="Answer this question">Answer</button>
+        </div>
       </div>
       {% endfor %}
-
       <!-- Hardcoded Sample Question 1 -->
       <div class="question-card" data-id="101">
         <h5 class="fw-semibold question-title">What is the difference between Python lists and tuples?</h5>
@@ -152,8 +163,10 @@
           <strong>Recent Comment:</strong>
           <p class="text-muted mb-0">Lists are mutable while tuples are immutable...</p>
         </div>
+        <div class="d-flex justify-content-end mt-2">
+          <button class="btn btn-sm ask-button text-white answer-btn" aria-label="Answer this question">Answer</button>
+        </div>
       </div>
-
       <!-- Hardcoded Sample Question 2 -->
       <div class="question-card" data-id="102">
         <h5 class="fw-semibold question-title">How does async/await work in JavaScript?</h5>
@@ -176,41 +189,44 @@
           <strong>Recent Comment:</strong>
           <p class="text-muted mb-0"><code>await</code> pauses execution until the promise is resolved...</p>
         </div>
+        <div class="d-flex justify-content-end mt-2">
+          <button class="btn btn-sm ask-button text-white answer-btn" aria-label="Answer this question">Answer</button>
+        </div>
       </div>
     </div>
   </div>
-
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const searchInput = document.getElementById('searchInput');
-  const cards = document.querySelectorAll('.question-card');
-  const upvoted = new Set(); // prevent multiple upvotes per session
+    const cards = document.querySelectorAll('.question-card');
+    const upvoted = new Set(); // prevent multiple upvotes per session
+    const currentUserId = '{{ current_user.id if current_user.is_authenticated else "" }}'; // Pass current user ID from Flask
 
-  // 🔍 Live Search
-  searchInput.addEventListener('input', () => {
-    const value = searchInput.value.toLowerCase();
-    cards.forEach(card => {
-      const title = card.querySelector('.question-title')?.textContent.toLowerCase() || '';
-      card.style.display = title.includes(value) ? 'block' : 'none';
+    // 🔍 Live Search
+    searchInput.addEventListener('input', () => {
+      const value = searchInput.value.toLowerCase();
+      cards.forEach(card => {
+        const title = card.querySelector('.question-title')?.textContent.toLowerCase() || '';
+        card.style.display = title.includes(value) ? 'block' : 'none';
+      });
     });
-  });
 
-  // 👍 Handle Upvotes (Client-side only)
-  document.querySelectorAll('.upvote-btn').forEach(btn => {
-    btn.addEventListener('click', function () {
-      const card = this.closest('.question-card');
-      const questionId = card.getAttribute('data-id');
-      const countSpan = this.querySelector('.like-count');
+    // 👍 Handle Upvotes (Client-side only)
+    document.querySelectorAll('.upvote-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const card = this.closest('.question-card');
+        const questionId = card.getAttribute('data-id');
+        const countSpan = this.querySelector('.like-count');
 
-      if (upvoted.has(questionId)) {
-        alert("You've already upvoted this question.");
-        return;
-      }
+        if (upvoted.has(questionId)) {
+          alert("You've already upvoted this question.");
+          return;
+        }
 
-      upvoted.add(questionId);
-      countSpan.textContent = parseInt(countSpan.textContent) + 1;
+        upvoted.add(questionId);
+        countSpan.textContent = parseInt(countSpan.textContent) + 1;
+      });
     });
-  });
 
     // 💬 Comment Toggle + Submit
     document.querySelectorAll('.question-card').forEach(card => {
@@ -229,20 +245,160 @@
         commentBox.style.display = commentBox.style.display === 'none' ? 'block' : 'none';
       });
 
-      commentBox.querySelector('.submit-comment').addEventListener('click', () => {
+      commentBox.querySelector('.submit-comment').addEventListener('click', async () => {
         const textarea = commentBox.querySelector('.comment-input');
         const commentsDiv = commentBox.querySelector('.comments');
         const comment = textarea.value.trim();
         if (!comment) return;
 
+        const commentId = Date.now(); // Temporary ID for client-side
         const newComment = document.createElement('div');
         newComment.className = 'comment';
-        newComment.textContent = comment;
+        newComment.dataset.id = commentId;
+        newComment.dataset.userId = currentUserId;
+        newComment.innerHTML = `
+          ${comment}
+          ${currentUserId ? '<span class="delete-btn" aria-label="Delete comment">×</span>' : ''}
+        `;
         commentsDiv.appendChild(newComment);
         textarea.value = '';
 
         const commentCount = card.querySelector('.comment-count');
         commentCount.textContent = parseInt(commentCount.textContent) + 1;
+
+        // Delete Comment
+        newComment.querySelector('.delete-btn')?.addEventListener('click', async () => {
+          if (!currentUserId) {
+            alert('Please log in to delete comments.');
+            return;
+          }
+          try {
+            const response = await fetch(`/comment/${commentId}/delete`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: `user_id=${encodeURIComponent(currentUserId)}`
+            });
+            if (response.ok) {
+              newComment.remove();
+              commentCount.textContent = parseInt(commentCount.textContent) - 1;
+            } else {
+              alert('Error deleting comment.');
+            }
+          } catch (error) {
+            alert('Error: ' + error.message);
+          }
+        });
+      });
+    });
+
+    // 📝 Answer Toggle + Submit with Rich Text Editor
+    document.querySelectorAll('.question-card').forEach(card => {
+      const answerBtn = card.querySelector('.answer-btn');
+      const answerBox = document.createElement('div');
+      answerBox.className = 'answer-section mt-3';
+      answerBox.style.display = 'none';
+      answerBox.innerHTML = `
+        <div class="answer-editor mb-2"></div>
+        <button class="btn btn-sm btn-primary submit-answer">Post Answer</button>
+        <div class="answers mt-2"></div>
+      `;
+      card.appendChild(answerBox);
+
+      let quill = null;
+      answerBtn.addEventListener('click', () => {
+        if (!currentUserId) {
+          alert('Please log in to post an answer.');
+          window.location.href = '{{ url_for("main.login") }}';
+          return;
+        }
+        const isVisible = answerBox.style.display === 'block';
+        answerBox.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible && !quill) {
+          quill = new Quill(answerBox.querySelector('.answer-editor'), {
+            theme: 'snow',
+            modules: {
+              toolbar: [
+                ['bold', 'italic', 'strike'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                ['link', 'image'],
+                [{ 'align': [] }],
+                ['emoji']
+              ]
+            },
+            placeholder: 'Write your answer...'
+          });
+        }
+      });
+
+      answerBox.querySelector('.submit-answer').addEventListener('click', async () => {
+        if (!quill) return;
+        const content = quill.root.innerHTML.trim();
+        if (content === '<p><br></p>') {
+          alert('Answer cannot be empty.');
+          return;
+        }
+        if (!currentUserId) {
+          alert('Please log in to post an answer.');
+          window.location.href = '{{ url_for("main.login") }}';
+          return;
+        }
+
+        const questionId = card.getAttribute('data-id');
+        try {
+          const response = await fetch(`/question/${questionId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `answer=${encodeURIComponent(content)}`
+          });
+          if (response.ok) {
+            const answerId = Date.now(); // Temporary ID for client-side
+            const answersDiv = answerBox.querySelector('.answers');
+            const newAnswer = document.createElement('div');
+            newAnswer.className = 'answer';
+            newAnswer.dataset.id = answerId;
+            newAnswer.dataset.userId = currentUserId;
+            newAnswer.innerHTML = `
+              ${content}
+              ${currentUserId ? '<span class="delete-btn" aria-label="Delete answer">×</span>' : ''}
+            `;
+            answersDiv.appendChild(newAnswer);
+            quill.root.innerHTML = '';
+            const commentCount = card.querySelector('.comment-count');
+            commentCount.textContent = parseInt(commentCount.textContent) + 1;
+          } else {
+            alert('Error posting answer. Please try again.');
+          }
+        } catch (error) {
+          alert('Error: ' + error.message);
+        }
+      });
+
+      // Delete Answer
+      answerBox.querySelector('.answers').addEventListener('click', async (e) => {
+        if (e.target.classList.contains('delete-btn')) {
+          if (!currentUserId) {
+            alert('Please log in to delete answers.');
+            return;
+          }
+          const answer = e.target.closest('.answer');
+          const answerId = answer.dataset.id;
+          try {
+            const response = await fetch(`/answer/${answerId}/delete`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: `user_id=${encodeURIComponent(currentUserId)}`
+            });
+            if (response.ok) {
+              answer.remove();
+              const commentCount = card.querySelector('.comment-count');
+              commentCount.textContent = parseInt(commentCount.textContent) - 1;
+            } else {
+              alert('Error deleting answer.');
+            }
+          } catch (error) {
+            alert('Error: ' + error.message);
+          }
+        }
       });
     });
   </script>
